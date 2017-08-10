@@ -49,6 +49,7 @@ function acceptPost(post) {
     username: post.get('username'),
     post_number: post.get('post_number'),
     excerpt: post.get('cooked'),
+    name: post.get('name')
   });
 
   ajax("/solution/accept", {
@@ -166,6 +167,7 @@ export default {
       acceptedAnswerHtml: function() {
         const username = this.get('accepted_answer.username');
         const postNumber = this.get('accepted_answer.post_number');
+        const name = this.get('endorsed_answer.name');
 
         if (!username || !postNumber) {
           return "";
@@ -176,7 +178,8 @@ export default {
           username,
           post_path: this.get('url') + "/" + postNumber,
           post_number: postNumber,
-          user_path: User.create({username: username}).get('path')
+          user_path: User.create({username: username}).get('path'),
+          name: name
         });
       }.property('accepted_answer', 'id')
     });

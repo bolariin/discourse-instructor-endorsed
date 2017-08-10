@@ -3,7 +3,7 @@ plugins:
     default: true
     client: true
   allow_solved_on_all_topics:
-    default: false
+    default: true
     client: true
   accept_all_solutions_trust_level:
     default: 4
