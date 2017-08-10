@@ -6,7 +6,7 @@ plugins:
     default: true
     client: true
   accept_all_solutions_trust_level:
-    default: 4
+    default: 1
     client: true
   empty_box_on_unsolved:
     default: false
