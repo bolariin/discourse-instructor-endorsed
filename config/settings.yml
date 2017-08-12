@@ -1,18 +1,18 @@
 plugins:
-  solved_enabled:
+  endorse_enabled:
     default: true
     client: true
-  allow_solved_on_all_topics:
+  allow_endorsement_on_all_topics:
     default: true
     client: true
-  accept_all_solutions_trust_level:
+  endorsement_trust_level:
     default: 1
     client: true
-  empty_box_on_unsolved:
+  empty_circle_on_unsolved:
     default: false
     client: true
-  solved_quote_length:
+  endorsed_quote_length:
     default: 300
     client: false
-  solved_topics_auto_close_hours:
+  endorsed_topics_auto_close_hours:
     default: 0

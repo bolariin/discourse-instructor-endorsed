@@ -1,16 +1,16 @@
 en:
   js:
-    solved:
-      title: "Solved"
-      allow_accepted_answers: "Allow topic owner and staff to mark a reply as the solution"
-      accept_answer: "This reply solves the problem"
-      has_accepted_answer: "This topic has a solution"
-      has_no_accepted_answer: "This topic has no solution"
-      unaccept_answer: "This reply no longer solves the problem"
-      accepted_answer: "Solution"
+    endorsed:
+      title: "Endorsed"
+      allow_endorsed_answers: "Allow instructors to mark a reply as the solution"
+      endorse_answer: "This reply is a good answer to the problem"
+      has_endorsed_answer: "This topic has an endorsed solution"
+      has_no_endorsed_answer: "This topic has no endorsed solution"
+      unendorse_answer: "There seems to be a better solution to the problem"
+      endorsed_answer: "Endorsed"
       solution: "Solution"
-      solution_summary:
+      endorsed_summary:
         one: "solution <i class='fa fa-check-square'></i>"
         other: "solutions <i class='fa fa-check-square'></i>"
-      accepted_html: "<i class='fa-check-square fa accepted'></i> Solved <span class='by'>by <a href data-user-card='{{username_lower}}'>{{name}} ({{username}})</a></span> in <a href='{{post_path}}'>post #{{post_number}}</a>"
-      accepted_notification: "<i title='accepted' class='fa fa-check-square'></i><p><span>{{username}}</span> {{description}}</p>"
+      endorsed_html: "<i class='fa-check-square fa accepted'></i> Post <span class='by'>by <a href data-user-card='{{username_lower}}'>{{name}} ({{username}})</a></span> in <a href='{{post_path}}'>post #{{post_number}}</a> has been endorsed by the instructor"
+      endorsed_notification: "<i title='accepted' class='fa fa-thumbs-up'></i><p><span>{{username}}</span> {{description}}</p>"

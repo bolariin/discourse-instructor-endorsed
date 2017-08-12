@@ -1,10 +1,9 @@
-# name: discourse-solved
-# about: Add a solved button to answers on Discourse
+# name: discourse-instructor-endorsed
+# about: Add an endorse button to posts on Discourse
 # version: 0.1
-# authors: Sam Saffron
-# url: https://github.com/discourse/discourse-solved
+# url: https://github.com/bolariin/discourse-instructor-endorsed
 
-enabled_site_setting :solved_enabled
+enabled_site_setting :endorse_enabled
 
 PLUGIN_NAME = "discourse_solved".freeze
 
