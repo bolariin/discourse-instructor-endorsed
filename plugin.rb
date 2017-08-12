@@ -5,17 +5,17 @@
 
 enabled_site_setting :endorse_enabled
 
-PLUGIN_NAME = "discourse_solved".freeze
+PLUGIN_NAME = "discourse_instructor_endorsed".freeze
 
 register_asset 'stylesheets/solutions.scss'
 
 after_initialize do
 
   # we got to do a one time upgrade
-  if defined?(UserAction::SOLVED)
-    unless $redis.get('solved_already_upgraded')
-      unless UserAction.where(action_type: UserAction::SOLVED).exists?
-        Rails.logger.info("Upgrading storage for solved")
+  if defined?(UserAction::ENDORSED)
+    unless $redis.get('endorsed_already_upgraded')
+      unless UserAction.where(action_type: UserAction::ENDORSED).exists?
+        Rails.logger.info("Upgrading storage for endorsed")
         sql = <<SQL
         INSERT INTO user_actions(action_type,
                                  user_id,
@@ -24,7 +24,7 @@ after_initialize do
                                  acting_user_id,
                                  created_at,
                                  updated_at)
-        SELECT :solved,
+        SELECT :endorsed,
                p.user_id,
                p.topic_id,
                p.id,
@@ -38,56 +38,54 @@ after_initialize do
         JOIN
           topics t ON t.id = p.topic_id
         WHERE
-          pc.name = 'is_accepted_answer' AND
+          pc.name = 'is_endorsed_answer' AND
           pc.value = 'true' AND
           p.user_id IS NOT NULL
 SQL
 
-        UserAction.exec_sql(sql, solved: UserAction::SOLVED)
+        UserAction.exec_sql(sql, endorsed: UserAction::ENDORSED)
       end
-      $redis.set("solved_already_upgraded", "true")
+      $redis.set("endorsed_already_upgraded", "true")
     end
   end
 
-  module ::DiscourseSolved
+  module ::DiscourseInstructorEndorsed
     class Engine < ::Rails::Engine
       engine_name PLUGIN_NAME
-      isolate_namespace DiscourseSolved
+      isolate_namespace DiscourseInstructorEndorsed
     end
   end
 
   require_dependency "application_controller"
-  class DiscourseSolved::AnswerController < ::ApplicationController
+  class DiscourseInstructorEndorsed::AnswerController < ::ApplicationController
 
-    def accept
-
-      limit_accepts
+    def endorse
 
       post = Post.find(params[:id].to_i)
       topic = post.topic
 
-      guardian.ensure_can_accept_answer!(topic)
+      guardian.ensure_can_endorse_answer!(topic)
 
-      accepted_id = topic.custom_fields["accepted_answer_post_id"].to_i
-      if accepted_id > 0
+      endorsed_id = topic.custom_fields["endorsed_answer_post_id"].to_i
+      if endorsed_id > 0
         if p2 = Post.find_by(id: accepted_id)
-          p2.custom_fields["is_accepted_answer"] = nil
+          p2.custom_fields["is_endorsed_answer"] = nil
           p2.save!
 
-          if defined?(UserAction::SOLVED)
-            UserAction.where(action_type: UserAction::SOLVED, target_post_id: p2.id).destroy_all
+          if defined?(UserAction::ENDORSED)
+            UserAction.where(action_type: UserAction::ENDORSED, target_post_id: p2.id).destroy_all
           end
         end
       end
 
-      post.custom_fields["is_accepted_answer"] = "true"
-      topic.custom_fields["accepted_answer_post_id"] = post.id
+      post.custom_fields["is_endorsed_answer"] = "true"
+      topic.custom_fields["endorsed_answer_post_id"] = post.id
       topic.save!
       post.save!
 
-      if defined?(UserAction::SOLVED)
+      if defined?(UserAction::ENDORSED)
         UserAction.log_action!(
-          action_type: UserAction::SOLVED,
+          action_type: UserAction::ENDORSED,
           user_id: post.user_id,
           acting_user_id: guardian.user.id,
           target_post_id: post.id,
@@ -102,14 +100,14 @@ SQL
           topic_id: post.topic_id,
           post_number: post.post_number,
           data: {
-            message: 'solved.accepted_notification',
+            message: 'endorse.endorsed_notification',
             display_username: current_user.username,
             topic_title: topic.title
           }.to_json
         )
       end
 
-      if (auto_close_hours = SiteSetting.solved_topics_auto_close_hours) > (0) && !topic.closed
+      if (auto_close_hours = SiteSetting.endorsed_topics_auto_close_hours) > (0) && !topic.closed
         topic.set_or_create_timer(
           TopicTimer.types[:close],
           auto_close_hours,
@@ -119,27 +117,26 @@ SQL
         MessageBus.publish("/topic/#{topic.id}", reload_topic: true)
       end
 
-      DiscourseEvent.trigger(:accepted_solution, post)
+      DiscourseEvent.trigger(:endorsed_solution, post)
       render json: success_json
     end
 
-    def unaccept
-
-      limit_accepts
+    def unendorse
 
       post = Post.find(params[:id].to_i)
+      topic = post.topic
 
-      guardian.ensure_can_accept_answer!(post.topic)
+      guardian.ensure_can_endorse_answer!(topic)
 
-      post.custom_fields["is_accepted_answer"] = nil
-      post.topic.custom_fields["accepted_answer_post_id"] = nil
-      post.topic.save!
+      post.custom_fields["is_endorsed_answer"] = nil
+      topic.custom_fields["endorsed_answer_post_id"] = nil
+      topic.save!
       post.save!
 
       # TODO remove_action! does not allow for this type of interface
-      if defined? UserAction::SOLVED
+      if defined? UserAction::ENDORSED
         UserAction.where(
-          action_type: UserAction::SOLVED,
+          action_type: UserAction::ENDORSED,
           target_post_id: post.id
         ).destroy_all
       end
@@ -154,40 +151,32 @@ SQL
 
       notification.destroy if notification
 
-      DiscourseEvent.trigger(:unaccepted_solution, post)
+      DiscourseEvent.trigger(:unendorsed_solution, post)
 
       render json: success_json
     end
 
-    def limit_accepts
-      unless current_user.staff?
-        RateLimiter.new(nil, "accept-hr-#{current_user.id}", 20, 1.hour).performed!
-        RateLimiter.new(nil, "accept-min-#{current_user.id}", 4, 30.seconds).performed!
-      end
-    end
-  end
-
-  DiscourseSolved::Engine.routes.draw do
-    post "/accept" => "answer#accept"
-    post "/unaccept" => "answer#unaccept"
+  DiscourseInstructorEndorsed::Engine.routes.draw do
+    post "/endorse" => "answer#endorse"
+    post "/unendorse" => "answer#unendorse"
   end
 
   Discourse::Application.routes.append do
-    mount ::DiscourseSolved::Engine, at: "solution"
+    mount ::DiscourseInstructorEndorsed::Engine, at: "solution"
   end
 
   TopicView.add_post_custom_fields_whitelister do |user|
-    ["is_accepted_answer"]
+    ["is_endorsed_answer"]
   end
 
   if Report.respond_to?(:add_report)
-    AdminDashboardData::GLOBAL_REPORTS << "accepted_solutions"
+    AdminDashboardData::GLOBAL_REPORTS << "endorsed_solutions"
 
-    Report.add_report("accepted_solutions") do |report|
+    Report.add_report("endorsed_solutions") do |report|
       report.data = []
-      accepted_solutions = TopicCustomField.where(name: "accepted_answer_post_id")
-      accepted_solutions = accepted_solutions.joins(:topic).where("topics.category_id = ?", report.category_id) if report.category_id
-      accepted_solutions.where("topic_custom_fields.created_at >= ?", report.start_date)
+      endorsed_solutions = TopicCustomField.where(name: "endorsed_answer_post_id")
+      endorsed_solutions = endorsed_solutions.joins(:topic).where("topics.category_id = ?", report.category_id) if report.category_id
+      endorsed_solutions.where("topic_custom_fields.created_at >= ?", report.start_date)
         .where("topic_custom_fields.created_at <= ?", report.end_date)
         .group("DATE(topic_custom_fields.created_at)")
         .order("DATE(topic_custom_fields.created_at)")
@@ -195,66 +184,67 @@ SQL
         .each do |date, count|
         report.data << { x: date, y: count }
       end
-      report.total = accepted_solutions.count
-      report.prev30Days = accepted_solutions.where("topic_custom_fields.created_at >= ?", report.start_date - 30.days)
+      report.total = endorsed_solutions.count
+      report.prev30Days = endorsed_solutions.where("topic_custom_fields.created_at >= ?", report.start_date - 30.days)
         .where("topic_custom_fields.created_at <= ?", report.start_date)
         .count
     end
   end
 
-  if defined?(UserAction::SOLVED)
+  if defined?(UserAction::ENDORSED)
     require_dependency 'user_summary'
     class ::UserSummary
-      def solved_count
+      def endorsed_count
         UserAction
           .where(user: @user)
-          .where(action_type: UserAction::SOLVED)
+          .where(action_type: UserAction::ENDORSED)
           .count
       end
     end
 
     require_dependency 'user_summary_serializer'
     class ::UserSummarySerializer
-      attributes :solved_count
+      attributes :endorsed_count
 
-      def solved_count
-        object.solved_count
+      def endorsed_count
+        object.endorsed_count
       end
     end
   end
 
   require_dependency 'topic_view_serializer'
   class ::TopicViewSerializer
-    attributes :accepted_answer
+    attributes :endorsed_answer
 
-    def include_accepted_answer?
+    def include_endorsed_answer?
       accepted_answer_post_id
     end
 
-    def accepted_answer
+    def endorsed_answer
       if info = accepted_answer_post_info
         {
           post_number: info[0],
           username: info[1],
-          excerpt: info[2]
+          excerpt: info[2],
+          name: info[3]
         }
       end
     end
 
-    def accepted_answer_post_info
+    def endorsed_answer_post_info
       # TODO: we may already have it in the stream ... so bypass query here
       postInfo = Post.where(id: accepted_answer_post_id, topic_id: object.topic.id)
         .joins(:user)
-        .pluck('post_number', 'username', 'cooked')
+        .pluck('post_number', 'username', 'cooked', 'name')
         .first
 
       if postInfo
-        postInfo[2] = PrettyText.excerpt(postInfo[2], SiteSetting.solved_quote_length)
+        postInfo[2] = PrettyText.excerpt(postInfo[2], SiteSetting.endorsed_quote_length)
         return postInfo
       end
     end
 
-    def accepted_answer_post_id
+    def endorsed_answer_post_id
       id = object.topic.custom_fields["accepted_answer_post_id"]
       # a bit messy but race conditions can give us an array here, avoid
       id && id.to_i rescue nil
@@ -263,69 +253,66 @@ SQL
   end
 
   class ::Category
-    after_save :reset_accepted_cache
+    after_save :reset_endorsed_cache
 
     protected
-    def reset_accepted_cache
-      ::Guardian.reset_accepted_answer_cache
+    def reset_endorsed_cache
+      ::Guardian.reset_endorsed_answer_cache
     end
   end
 
   class ::Guardian
 
-    @@allowed_accepted_cache = DistributedCache.new("allowed_accepted")
+    @@endorsed_cache = DistributedCache.new("endorsed")
 
     def self.reset_accepted_answer_cache
-      @@allowed_accepted_cache["allowed"] =
+      @@endorsed_cache["allowed"] =
         begin
           Set.new(
             CategoryCustomField
-              .where(name: "enable_accepted_answers", value: "true")
+              .where(name: "enable_endorse", value: "true")
               .pluck(:category_id)
           )
         end
     end
 
-    def allow_accepted_answers_on_category?(category_id)
-      return true if SiteSetting.allow_solved_on_all_topics
+    def allow_endorsement_on_category?(category_id)
+      return true if SiteSetting.allow_endorsement_on_all_topics
 
-      self.class.reset_accepted_answer_cache unless @@allowed_accepted_cache["allowed"]
-      @@allowed_accepted_cache["allowed"].include?(category_id)
+      self.class.reset_accepted_answer_cache unless @@endorsed_cache["allowed"]
+      @@endorsed_cache["allowed"].include?(category_id)
     end
 
-    def can_accept_answer?(topic)
-      allow_accepted_answers_on_category?(topic.category_id) && (
-        is_staff? || (
-          authenticated? && ((!topic.closed? && topic.user_id == current_user.id) ||
-                            (current_user.trust_level >= SiteSetting.accept_all_solutions_trust_level))
-        )
+    def can_endorse_answer?(topic)
+      allow_endorsement_on_category?(topic.category_id) && (
+          authenticated? &&  (current_user.trust_level >= SiteSetting.endorsement_trust_level)
       )
     end
   end
 
   require_dependency 'post_serializer'
   class ::PostSerializer
-    attributes :can_accept_answer, :can_unaccept_answer, :accepted_answer
+    attributes :can_endorse_answer, :can_unendorse_answer, :endorsed_answer
 
-    def can_accept_answer
+    def can_endorse_answer
       topic = (topic_view && topic_view.topic) || object.topic
 
       if topic
-        return scope.can_accept_answer?(topic) && object.post_number > 1 && !accepted_answer
+        return scope.can_endorse_answer?(topic) && object.post_number > 1 && !endorsed_answer
       end
 
       false
     end
 
-    def can_unaccept_answer
+    def can_unendorse_answer
       topic = (topic_view && topic_view.topic) || object.topic
       if topic
-        return scope.can_accept_answer?(topic) && (post_custom_fields["is_accepted_answer"] == 'true')
+        return scope.can_endorse_answer?(topic) && (post_custom_fields["is_endorsed_answer"] == 'true')
       end
     end
 
-    def accepted_answer
-      post_custom_fields["is_accepted_answer"] == 'true'
+    def endorsed_answer
+      post_custom_fields["is_endorsed_answer"] == 'true'
     end
   end
 
@@ -333,21 +320,21 @@ SQL
 
   #TODO Remove when plugin is 1.0
   if Search.respond_to? :advanced_filter
-    Search.advanced_filter(/in:solved/) do |posts|
+    Search.advanced_filter(/in:endorsed/) do |posts|
       posts.where("topics.id IN (
         SELECT tc.topic_id
         FROM topic_custom_fields tc
-        WHERE tc.name = 'accepted_answer_post_id' AND
+        WHERE tc.name = 'endorsed_answer_post_id' AND
                         tc.value IS NOT NULL
         )")
 
     end
 
-    Search.advanced_filter(/in:unsolved/) do |posts|
+    Search.advanced_filter(/in:unendorsed/) do |posts|
       posts.where("topics.id NOT IN (
         SELECT tc.topic_id
         FROM topic_custom_fields tc
-        WHERE tc.name = 'accepted_answer_post_id' AND
+        WHERE tc.name = 'endorsed_answer_post_id' AND
                         tc.value IS NOT NULL
         )")
 
@@ -357,19 +344,19 @@ SQL
   if Discourse.has_needed_version?(Discourse::VERSION::STRING, '1.8.0.beta6')
     require_dependency 'topic_query'
 
-    TopicQuery.add_custom_filter(:solved) do |results, topic_query|
-      if topic_query.options[:solved] == 'yes'
+    TopicQuery.add_custom_filter(:endorsed) do |results, topic_query|
+      if topic_query.options[:endorsed] == 'yes'
         results = results.where("topics.id IN (
           SELECT tc.topic_id
           FROM topic_custom_fields tc
-          WHERE tc.name = 'accepted_answer_post_id' AND
+          WHERE tc.name = 'endorsed_answer_post_id' AND
                           tc.value IS NOT NULL
           )")
-      elsif topic_query.options[:solved] == 'no'
+      elsif topic_query.options[:endorsed] == 'no'
         results = results.where("topics.id NOT IN (
           SELECT tc.topic_id
           FROM topic_custom_fields tc
-          WHERE tc.name = 'accepted_answer_post_id' AND
+          WHERE tc.name = 'endorsed_answer_post_id' AND
                           tc.value IS NOT NULL
           )")
       end
@@ -381,45 +368,45 @@ SQL
   require_dependency 'listable_topic_serializer'
 
   class ::TopicListItemSerializer
-    attributes :has_accepted_answer, :can_have_answer
+    attributes :has_endorsed_answer, :can_endorse_answer
 
-    def has_accepted_answer
-      object.custom_fields["accepted_answer_post_id"] ? true : false
+    def has_endorsed_answer
+      object.custom_fields["endorsed_answer_post_id"] ? true : false
     end
 
-    def can_have_answer
-      return true if SiteSetting.allow_solved_on_all_topics
+    def can_endorse_answer
+      return true if SiteSetting.allow_endorsement_on_all_topics
       return false if object.closed || object.archived
-      return scope.allow_accepted_answers_on_category?(object.category_id)
+      return scope.allow_endorsement_on_category?(object.category_id)
     end
 
-    def include_can_have_answer?
-      SiteSetting.empty_box_on_unsolved
+    def include_can_endorse_answer?
+      SiteSetting.empty_circle_on_unendorsed
     end
   end
 
   class ::ListableTopicSerializer
-    attributes :has_accepted_answer, :can_have_answer
+    attributes :has_accepted_answer, :can_endorse_answer
 
-    def has_accepted_answer
-      object.custom_fields["accepted_answer_post_id"] ? true : false
+    def has_endorsed_answer
+      object.custom_fields["endorsed_answer_post_id"] ? true : false
     end
 
-    def can_have_answer
-      return true if SiteSetting.allow_solved_on_all_topics
+    def can_endorse_answer
+      return true if SiteSetting.allow_endorsement_on_all_topics
       return false if object.closed || object.archived
-      return scope.allow_accepted_answers_on_category?(object.category_id)
+      return scope.allow_endorsement_on_category?(object.category_id)
     end
 
-    def include_can_have_answer?
-      SiteSetting.empty_box_on_unsolved
+    def include_can_endorse_answer?
+      SiteSetting.empty_circle_on_unendorsed
     end
   end
 
-  TopicList.preloaded_custom_fields << "accepted_answer_post_id" if TopicList.respond_to? :preloaded_custom_fields
+  TopicList.preloaded_custom_fields << "endorsed_answer_post_id" if TopicList.respond_to? :preloaded_custom_fields
 
   if CategoryList.respond_to?(:preloaded_topic_custom_fields)
-    CategoryList.preloaded_topic_custom_fields << "accepted_answer_post_id"
+    CategoryList.preloaded_topic_custom_fields << "endorsed_answer_post_id"
   end
 
 end

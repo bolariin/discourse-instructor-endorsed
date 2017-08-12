@@ -8,7 +8,7 @@ plugins:
   endorsement_trust_level:
     default: 1
     client: true
-  empty_circle_on_unsolved:
+  empty_circle_on_unendorsed:
     default: false
     client: true
   endorsed_quote_length:
