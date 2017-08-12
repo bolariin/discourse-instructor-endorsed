@@ -76,7 +76,7 @@ function initializeWithApi(api) {
     if (canEndorse) {
       return {
         action: 'endorseAnswer',
-        icon: 'check-circle-o',
+        icon: 'thumbs-up',
         className: 'unaccepted',
         title: 'endorsed.endorse_answer',
         position
