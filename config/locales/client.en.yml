@@ -8,9 +8,9 @@ en:
       has_no_endorsed_answer: "This topic has no endorsed solution"
       unendorse_answer: "There seems to be a better solution to the problem"
       endorsed_answer: "Endorsed"
-      solution: "Solution"
+      solution: "Instructor Endorsed"
       endorsed_summary:
-        one: "solution <i class='fa fa-check-square'></i>"
-        other: "solutions <i class='fa fa-check-square'></i>"
-      endorsed_html: "<i class='fa-check-square fa accepted'></i> Post <span class='by'>by <a href data-user-card='{{username_lower}}'>{{name}} ({{username}})</a></span> in <a href='{{post_path}}'>post #{{post_number}}</a> has been endorsed by the instructor"
+        one: "solution <i class='fa fa-thumbs-up'></i>"
+        other: "solutions <i class='fa fa-thumbs-up'></i>"
+      endorsed_html: "<i class='fa-thumbs-up fa accepted'></i> Post <span class='by'>by <a href data-user-card='{{username_lower}}'>{{name}} ({{username}})</a></span> in <a href='{{post_path}}'>post #{{post_number}}</a> has been endorsed by the instructor"
       endorsed_notification: "<i title='accepted' class='fa fa-thumbs-up'></i><p><span>{{username}}</span> {{description}}</p>"

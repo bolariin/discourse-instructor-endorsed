@@ -408,5 +408,4 @@ SQL
   if CategoryList.respond_to?(:preloaded_topic_custom_fields)
     CategoryList.preloaded_topic_custom_fields << "endorsed_answer_post_id"
   end
-
 end
