@@ -194,7 +194,7 @@ export default {
             title: I18n.t('endorsed.has_endorsed_answer'),
             icon: 'thumbs-up'
           });
-        }else if(this.topic.can_be_endorsed && this.siteSettings.endorse_enabled && this.siteSettings.circle_on_unendorsed){
+        }else if(this.topic.can_endorse_answer && this.siteSettings.endorse_enabled && this.siteSettings.empty_circle_on_unendorsed){
           results.push({
             openTag: 'span',
             closeTag: 'span',
