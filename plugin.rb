@@ -68,7 +68,7 @@ SQL
 
       endorsed_id = topic.custom_fields["endorsed_answer_post_id"].to_i
       if endorsed_id > 0
-        if p2 = Post.find_by(id: accepted_id)
+        if p2 = Post.find_by(id: endorsed_id)
           p2.custom_fields["is_endorsed_answer"] = nil
           p2.save!
 
@@ -155,6 +155,7 @@ SQL
 
       render json: success_json
     end
+  end
 
   DiscourseInstructorEndorsed::Engine.routes.draw do
     post "/endorse" => "answer#endorse"
@@ -217,11 +218,11 @@ SQL
     attributes :endorsed_answer
 
     def include_endorsed_answer?
-      accepted_answer_post_id
+      endorsed_answer_post_id
     end
 
     def endorsed_answer
-      if info = accepted_answer_post_info
+      if info = endorsed_answer_post_info
         {
           post_number: info[0],
           username: info[1],
@@ -233,7 +234,7 @@ SQL
 
     def endorsed_answer_post_info
       # TODO: we may already have it in the stream ... so bypass query here
-      postInfo = Post.where(id: accepted_answer_post_id, topic_id: object.topic.id)
+      postInfo = Post.where(id: endorsed_answer_post_id, topic_id: object.topic.id)
         .joins(:user)
         .pluck('post_number', 'username', 'cooked', 'name')
         .first
@@ -245,7 +246,7 @@ SQL
     end
 
     def endorsed_answer_post_id
-      id = object.topic.custom_fields["accepted_answer_post_id"]
+      id = object.topic.custom_fields["endorsed_answer_post_id"]
       # a bit messy but race conditions can give us an array here, avoid
       id && id.to_i rescue nil
     end
@@ -265,7 +266,7 @@ SQL
 
     @@endorsed_cache = DistributedCache.new("endorsed")
 
-    def self.reset_accepted_answer_cache
+    def self.reset_endorsed_answer_cache
       @@endorsed_cache["allowed"] =
         begin
           Set.new(
@@ -279,7 +280,7 @@ SQL
     def allow_endorsement_on_category?(category_id)
       return true if SiteSetting.allow_endorsement_on_all_topics
 
-      self.class.reset_accepted_answer_cache unless @@endorsed_cache["allowed"]
+      self.class.reset_endorsed_answer_cache unless @@endorsed_cache["allowed"]
       @@endorsed_cache["allowed"].include?(category_id)
     end
 
@@ -386,7 +387,7 @@ SQL
   end
 
   class ::ListableTopicSerializer
-    attributes :has_accepted_answer, :can_endorse_answer
+    attributes :has_endorsed_answer, :can_endorse_answer
 
     def has_endorsed_answer
       object.custom_fields["endorsed_answer_post_id"] ? true : false
@@ -408,4 +409,5 @@ SQL
   if CategoryList.respond_to?(:preloaded_topic_custom_fields)
     CategoryList.preloaded_topic_custom_fields << "endorsed_answer_post_id"
   end
+
 end
