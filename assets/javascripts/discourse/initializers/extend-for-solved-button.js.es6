@@ -167,7 +167,7 @@ export default {
       acceptedAnswerHtml: function() {
         const username = this.get('accepted_answer.username');
         const postNumber = this.get('accepted_answer.post_number');
-        const name = this.get('endorsed_answer.name');
+        const name = this.get('accepted_answer.name');
 
         if (!username || !postNumber) {
           return "";
