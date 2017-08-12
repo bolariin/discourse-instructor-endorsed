@@ -6,53 +6,53 @@ import { withPluginApi } from 'discourse/lib/plugin-api';
 import { ajax } from 'discourse/lib/ajax';
 import PostCooked from 'discourse/widgets/post-cooked';
 
-function clearAccepted(topic) {
+function clearEndorsed(topic) {
   const posts = topic.get('postStream.posts');
   posts.forEach(post => {
     if (post.get('post_number') > 1 ) {
-      post.set('accepted_answer',false);
-      post.set('can_accept_answer',true);
-      post.set('can_unaccept_answer',false);
+      post.set('endorsed_answer',false);
+      post.set('can_endorse_answer',true);
+      post.set('can_unendorse_answer',false);
     }
   });
 }
 
-function unacceptPost(post) {
-  if (!post.get('can_unaccept_answer')) { return; }
+function unendorsePost(post) {
+  if (!post.get('can_unendorse_answer')) { return; }
   const topic = post.topic;
 
   post.setProperties({
-    can_accept_answer: true,
-    can_unaccept_answer: false,
-    accepted_answer: false
+    can_endorse_answer: true,
+    can_unendorse_answer: false,
+    endorsed_answer: false
   });
-  topic.set('accepted_answer', undefined);
+  topic.set('endorsed_answer', undefined);
 
-  ajax("/solution/unaccept", {
+  ajax("/solution/unendorse", {
     type: 'POST',
     data: { id: post.get('id') }
   }).catch(popupAjaxError);
 }
 
-function acceptPost(post) {
+function endorsePost(post) {
   const topic = post.topic;
 
-  clearAccepted(topic);
+  clearEndorsed(topic);
 
   post.setProperties({
-    can_unaccept_answer: true,
-    can_accept_answer: false,
-    accepted_answer: true
+    can_unendorse_answer: true,
+    can_endorse_answer: false,
+    endorsed_answer: true
   });
 
-  topic.set('accepted_answer', {
+  topic.set('endorsed_answer', {
     username: post.get('username'),
     post_number: post.get('post_number'),
     excerpt: post.get('cooked'),
     name: post.get('name')
   });
 
-  ajax("/solution/accept", {
+  ajax("/solution/endorse", {
     type: 'POST',
     data: { id: post.get('id') }
   }).catch(popupAjaxError);
@@ -61,37 +61,36 @@ function acceptPost(post) {
 function initializeWithApi(api) {
   const currentUser = api.getCurrentUser();
 
-  api.includePostAttributes('can_accept_answer', 'can_unaccept_answer', 'accepted_answer');
+  api.includePostAttributes('can_endorse_answer', 'can_unendorse_answer', 'endorsed_answer');  
 
   if (api.addDiscoveryQueryParam) {
-    api.addDiscoveryQueryParam('solved', {replace: true, refreshModel: true});
+    api.addDiscoveryQueryParam('endorsed', {replace: true, refreshModel: true});
   }
 
-  api.addPostMenuButton('solved', attrs => {
-    const canAccept = attrs.can_accept_answer;
-    const canUnaccept = attrs.can_unaccept_answer;
-    const accepted = attrs.accepted_answer;
-    const isOp = currentUser && currentUser.id === attrs.topicCreatedById;
-    const position = (!accepted && canAccept && !isOp) ? 'second-last-hidden' : 'first';
+  api.addPostMenuButton('endorsed', attrs => {
+    const canEndorse = attrs.can_endorse_answer;
+    const canUnendorse = attrs.can_unendorse_answer;
+    const endorsed = attrs.endorsed_answer;
+    const position = 'first';
 
-    if (canAccept) {
+    if (canEndorse) {
       return {
-        action: 'acceptAnswer',
-        icon: 'check-square-o',
+        action: 'endorseAnswer',
+        icon: 'check-circle-o',
         className: 'unaccepted',
-        title: 'solved.accept_answer',
+        title: 'endorsed.endorse_answer',
         position
       };
-    } else if (canUnaccept || accepted) {
-      const title = canUnaccept ? 'solved.unaccept_answer' : 'solved.accepted_answer';
+    } else if (canUnendorse || endorsed) {
+      const title = canUnendorse ? 'endorsed.unendorse_answer' : 'endorse.endorsed_answer';
       return {
-        action: 'unacceptAnswer',
-        icon: 'check-square',
+        action: 'unendorseAnswer',
+        icon: 'thumbs-up',
         title,
         className: 'accepted fade-out',
         position,
         beforeButton(h) {
-          return h('span.accepted-text', I18n.t('solved.solution'));
+          return h('span.accepted-text', I18n.t('endorsed.solution'));
         }
       };
     }
@@ -102,17 +101,17 @@ function initializeWithApi(api) {
       const postModel = dec.getModel();
       if (postModel) {
         const topic = postModel.get('topic');
-        if (topic.get('accepted_answer')) {
+        if (topic.get('endorsed_answer')) {
 
           var rawhtml = `
-            <aside class='quote' data-post="${topic.get('accepted_answer').post_number}" data-topic="${topic.get('id')}">
+            <aside class='quote' data-post="${topic.get('endorsed_answer').post_number}" data-topic="${topic.get('id')}">
               <div class='title'>
-                ${topic.get('acceptedAnswerHtml')} <div class="quote-controls"><\/div>
+                ${topic.get('endorsedAnswerHtml')} <div class="quote-controls"><\/div>
               </div>
               <blockquote>
-                ${topic.get('accepted_answer').excerpt}
+                ${topic.get('endorsed_answer').excerpt}
               </blockquote>
-            </aside>`;
+            </aside>`
 
           var cooked = new PostCooked({cooked:rawhtml});
 
@@ -124,32 +123,33 @@ function initializeWithApi(api) {
     }
   });
 
-  api.attachWidgetAction('post', 'acceptAnswer', function() {
+  api.attachWidgetAction('post', 'endorseAnswer', function() {
     const post = this.model;
     const current = post.get('topic.postStream.posts').filter(p => {
-      return p.get('post_number') === 1 || p.get('accepted_answer');
+      return p.get('post_number') === 1 || p.get('endorsed_answer');
     });
-    acceptPost(post);
+    endorsePost(post);
 
     current.forEach(p => this.appEvents.trigger('post-stream:refresh', { id: p.id }));
   });
 
-  api.attachWidgetAction('post', 'unacceptAnswer', function() {
+  api.attachWidgetAction('post', 'unendorseAnswer', function() {
     const post = this.model;
     const op = post.get('topic.postStream.posts').find(p => p.get('post_number') === 1);
-    unacceptPost(post);
+    unendorsePost(post);
     this.appEvents.trigger('post-stream:refresh', { id: op.get('id') });
   });
 
   if (api.registerConnectorClass) {
-    api.registerConnectorClass('user-activity-bottom', 'solved-list', {
+    api.registerConnectorClass('user-activity-bottom', 'endorsed-list', {
       shouldRender(args, component) {
-        return component.siteSettings.solved_enabled;
+        return component.siteSettings.endorse_enabled;
       },
     });
-    api.registerConnectorClass('user-summary-stat', 'solved-count', {
+
+    api.registerConnectorClass('user-summary-stat', 'endorsed-count', {
       shouldRender(args, component) {
-        return component.siteSettings.solved_enabled && args.model.solved_count > 0;
+        return component.siteSettings.endorse_enabled && args.model.endorsed_count > 0;
       },
       setupComponent() {
         this.set('classNames', ['linked-stat']);
@@ -159,47 +159,47 @@ function initializeWithApi(api) {
 }
 
 export default {
-  name: 'extend-for-solved-button',
+  name: 'extend-for-endorse-button',
   initialize() {
 
     Topic.reopen({
       // keeping this here cause there is complex localization
-      acceptedAnswerHtml: function() {
-        const username = this.get('accepted_answer.username');
-        const postNumber = this.get('accepted_answer.post_number');
-        const name = this.get('accepted_answer.name');
+      endorsedAnswerHtml: function() {
+        const username = this.get('endorsed_answer.username'); // change something here
+        const name = this.get('endorsed_answer.name');
+        const postNumber = this.get('endorsed_answer.post_number');
 
         if (!username || !postNumber) {
           return "";
         }
 
-        return I18n.t("solved.accepted_html", {
+        return I18n.t("endorsed.endorsed_html", {
           username_lower: username.toLowerCase(),
           username,
           post_path: this.get('url') + "/" + postNumber,
           post_number: postNumber,
           user_path: User.create({username: username}).get('path'),
-          name: name
+          name: name,
         });
-      }.property('accepted_answer', 'id')
+      }.property('endorsed_answer', 'id')
     });
 
     TopicStatus.reopen({
       statuses: function(){
         const results = this._super();
-        if (this.topic.has_accepted_answer) {
+        if (this.topic.has_endorsed_answer) {
           results.push({
             openTag: 'span',
             closeTag: 'span',
-            title: I18n.t('solved.has_accepted_answer'),
-            icon: 'check-square-o'
+            title: I18n.t('endorsed.has_endorsed_answer'),
+            icon: 'thumbs-up'
           });
-        }else if(this.topic.can_have_answer && this.siteSettings.solved_enabled && this.siteSettings.empty_box_on_unsolved){
+        }else if(this.topic.can_be_endorsed && this.siteSettings.endorse_enabled && this.siteSettings.circle_on_unendorsed){
           results.push({
             openTag: 'span',
             closeTag: 'span',
-            title: I18n.t('solved.has_no_accepted_answer'),
-            icon: 'square-o'
+            title: I18n.t('endorsed.has_no_endorsed_answer'),
+            icon: 'circle-o'
           });
         }
         return results;

@@ -1,4 +1,4 @@
-.solved-panel, .post-controls .accepted, .fa.accepted, .accepted-text {
+.endorsed-panel, .post-controls .accepted, .fa.accepted, .accepted-text {
   color: green;
 }
 
@@ -20,11 +20,11 @@
   float: left;
 }
 
-.mobile-view .solved-panel {
+.mobile-view .endorsed-panel {
   margin-bottom: 15px;
 }
 
-.solved-panel {
+.endorsed-panel {
 
   .by {
     display: none;

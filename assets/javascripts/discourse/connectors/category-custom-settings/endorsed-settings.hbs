@@ -1,0 +1,13 @@
+{{#if siteSettings.endorse_enabled}}
+<section class='field'>
+  {{#unless siteSettings.allow_endorsement_on_all_topics}}
+  <div class="enable-endorsed">
+    <label class="checkbox-label">
+      {{input type="checkbox" checked=category.enable_endorsed}}
+      {{i18n 'endorsed.allow_endorsed_answers'}}
+    </label>
+  </div>
+  {{/unless}}
+</section>
+{{/if}}
+
