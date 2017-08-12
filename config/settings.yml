@@ -9,7 +9,7 @@ plugins:
     default: 1
     client: true
   empty_circle_on_unendorsed:
-    default: false
+    default: true
     client: true
   endorsed_quote_length:
     default: 300
