@@ -285,7 +285,7 @@ SQL
     end
 
     def can_endorse_answer?(topic)
-      allow_endorsement_on_category?(topic.category_id) && (
+      SiteSetting.endorse_enabled && allow_endorsement_on_category?(topic.category_id) && (
           authenticated? &&  (current_user.trust_level >= SiteSetting.endorsement_trust_level)
       )
     end
