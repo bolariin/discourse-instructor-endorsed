@@ -6,7 +6,7 @@ plugins:
     default: true
     client: true
   endorsement_trust_level:
-    default: 1
+    default: 4
     client: true
   empty_circle_on_unendorsed:
     default: true
