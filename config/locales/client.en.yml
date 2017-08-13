@@ -2,7 +2,7 @@ en:
   js:
     endorsed:
       title: "Endorsed"
-      allow_endorsed_answers: "Allow instructors to endorse a solution"
+      allow_endorsed_answers: "Allow instructors to endorse solutions in this category"
       endorse_answer: "This reply is a good answer to the problem"
       has_endorsed_answer: "This topic has an endorsed solution"
       has_no_endorsed_answer: "This topic has no endorsed solution"
