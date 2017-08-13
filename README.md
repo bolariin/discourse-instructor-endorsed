@@ -1,6 +1,8 @@
 ## Discourse Instructor Endorsed
 This is a <a href="https://www.discourse.org/">Discourse</a> plugin. It is a modified version of the <a href="https://github.com/discourse/discourse-solved">Discourse Solved plugin</a>. It provides an endorse button on categories for instructor level users. This is for use in a school style discourse forum enabling instructors endorse a response to a question. 
 
+![selection_023](https://user-images.githubusercontent.com/24629960/29245733-a26b1bf8-7fb1-11e7-970d-54da4028a4ed.png)
+
 ## Installation
 
 ### Docker installation
@@ -40,6 +42,26 @@ For example: ln -s ~/discourse-plugin-test .
 ```
 * You can now make changes in your locally held Discourse Response Bot folder and see the effect of your changes when your run ```rails s``` in your locally held Discourse Forum files.
 
+## Getting Started
+* By default, most of settings have been enabled
+![selection_021](https://user-images.githubusercontent.com/24629960/29245761-3dcf2e5e-7fb2-11e7-95df-4cb4da6c4ac8.png)
+
+### Tips and Tricks
+* For endorsement trust level, the admin is expected to put the minimum trust level of an instructor in the box
+
+* Using endorsed topics auto close hours, the admin can close a topic after a post has been endorsed. By typing an integer, n, greater than zero in the box, a topic can be closed n hours after a post has been endorsed.
+
+* There is an endorsed section in activities. It helps you keep track of posts you made that are endorsed by instructors
+![selection_027](https://user-images.githubusercontent.com/24629960/29245740-b06e3bae-7fb1-11e7-8ca7-7e51e14adc33.png)
+
+* If you wish to allow instructors endorse in select categories, you can acheive this
+  * You acheive this by unselecting "allow endorsement on all topics"
+  ![selection_025](https://user-images.githubusercontent.com/24629960/29245736-a9cb5264-7fb1-11e7-8475-e6f1df6127ef.png)
+  
+  * Then proceed to the category settings of your select category
+  
+  * In the category settings of the select category, enable "Allow instructors to endorse solutions in this category"
+  ![selection_026](https://user-images.githubusercontent.com/24629960/29245846-ae5e7ff6-7fb4-11e7-9e84-7752453c9ac6.png)
 
 ## License
 MIT
