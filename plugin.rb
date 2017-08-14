@@ -100,7 +100,7 @@ SQL
           topic_id: post.topic_id,
           post_number: post.post_number,
           data: {
-            message: 'endorse.endorsed_notification',
+            message: 'endorsed.endorsed_notification',
             display_username: current_user.username,
             topic_title: topic.title
           }.to_json
